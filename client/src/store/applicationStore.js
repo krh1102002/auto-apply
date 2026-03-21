@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import axios from "axios";
+import API_BASE_URL from "../config/api";
 
 const useApplicationStore = create((set, get) => ({
   applications: [],
@@ -11,7 +12,7 @@ const useApplicationStore = create((set, get) => ({
     if (!background) set({ loading: true });
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.get("http://localhost:5000/api/applications", {
+      const res = await axios.get(`${API_BASE_URL}/api/applications`, {
         headers: { "x-auth-token": token },
       });
       set({ applications: res.data, loading: false });
@@ -25,7 +26,7 @@ const useApplicationStore = create((set, get) => ({
     try {
       const token = localStorage.getItem("token");
       await axios.post(
-        "http://localhost:5000/api/applications/apply",
+        `${API_BASE_URL}/api/applications/apply`,
         { jobId },
         {
           headers: { "x-auth-token": token },
@@ -50,7 +51,7 @@ const useApplicationStore = create((set, get) => ({
       // For now, we'll loop it or simulate it
       const promises = jobIds.map((jobId) =>
         axios.post(
-          "http://localhost:5000/api/applications/apply",
+          `${API_BASE_URL}/api/applications/apply`,
           { jobId },
           {
             headers: { "x-auth-token": token },

@@ -31,6 +31,30 @@ try {
     res.json({ message: 'Job Application Automation API is running' });
   });
 
+  app.get('/api/health', (req, res) => {
+    const dbStateMap = {
+      0: 'disconnected',
+      1: 'connected',
+      2: 'connecting',
+      3: 'disconnecting'
+    };
+
+    const dbStateCode = mongoose.connection.readyState;
+    const dbState = dbStateMap[dbStateCode] || 'unknown';
+    const isHealthy = dbState === 'connected';
+
+    res.status(isHealthy ? 200 : 503).json({
+      status: isHealthy ? 'ok' : 'degraded',
+      service: 'job-apply-api',
+      timestamp: new Date().toISOString(),
+      uptimeSeconds: Math.floor(process.uptime()),
+      database: {
+        state: dbState,
+        code: dbStateCode
+      }
+    });
+  });
+
   // Database Connection
   mongoose.connect(process.env.MONGODB_URI)
     .then(() => console.log('✅ MongoDB Connected'))

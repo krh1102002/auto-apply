@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import axios from "axios";
+import API_BASE_URL from "../config/api";
 
 const useJobStore = create((set, get) => ({
   jobs: [],
@@ -10,7 +11,7 @@ const useJobStore = create((set, get) => ({
     set({ loading: true });
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.get("http://localhost:5000/api/jobs", {
+      const res = await axios.get(`${API_BASE_URL}/api/jobs`, {
         headers: { "x-auth-token": token },
         params: filters,
       });
@@ -25,7 +26,7 @@ const useJobStore = create((set, get) => ({
     try {
       const token = localStorage.getItem("token");
       await axios.post(
-        "http://localhost:5000/api/jobs/crawl",
+        `${API_BASE_URL}/api/jobs/crawl`,
         { url },
         {
           headers: { "x-auth-token": token },
