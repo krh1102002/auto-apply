@@ -8,7 +8,9 @@ try {
   require('dotenv').config();
 
   const app = express();
-  const PORT = process.env.PORT || 5000;
+  // Render (and most PaaS) inject PORT; bind 0.0.0.0 so health checks see an open port.
+  const PORT = Number(process.env.PORT) || 5000;
+  const HOST = process.env.HOST || '0.0.0.0';
 
   // Middleware
   app.use(express.json());
@@ -26,6 +28,7 @@ try {
   app.use('/api/users', require('./routes/userRoutes'));
   app.use('/api/jobs', require('./routes/jobRoutes'));
   app.use('/api/applications', require('./routes/applicationRoutes'));
+  app.use('/api/cron', require('./routes/cronRoutes'));
 
   app.get('/', (req, res) => {
     res.json({ message: 'Job Application Automation API is running' });
@@ -51,7 +54,10 @@ try {
       database: {
         state: dbState,
         code: dbStateCode
-      }
+      },
+      cron: {
+        httpTriggerConfigured: Boolean(process.env.CRON_SECRET),
+      },
     });
   });
 
@@ -60,8 +66,8 @@ try {
     .then(() => console.log('✅ MongoDB Connected'))
     .catch(err => console.error('❌ MongoDB Connection Error:', err));
 
-  app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
+  app.listen(PORT, HOST, () => {
+    console.log(`🚀 Server listening on http://${HOST}:${PORT}`);
   });
 } catch (err) {
   console.error('SERVER INITIALIZATION ERROR:');

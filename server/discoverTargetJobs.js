@@ -3,6 +3,9 @@ const axios = require('axios');
 require('dotenv').config({ path: './.env' });
 const Job = require('./models/Job');
 
+/** Longer fetches (e.g. large Greenhouse boards) */
+const HTTP_TIMEOUT_MS = 45000;
+
 const TARGET_KEYWORDS = [
   'software engineer',
   'full stack',
@@ -62,6 +65,16 @@ const normalizeLever = (company, item) => ({
   status: 'Open'
 });
 
+/** 404 = board slug moved/disabled; timeout = slow API — not an app bug. */
+const formatFetchError = (error) => {
+  const status = error.response?.status;
+  if (status === 404) return 'board not found (404 — slug may have changed)';
+  if (error.code === 'ECONNABORTED' || /timeout/i.test(error.message || '')) {
+    return 'timeout (slow response)';
+  }
+  return error.message || String(error);
+};
+
 const upsertJobs = async (jobs) => {
   if (!jobs.length) return 0;
   const ops = jobs.map((job) => ({
@@ -80,14 +93,14 @@ const discoverFromGreenhouse = async () => {
   for (const company of GREENHOUSE_BOARDS) {
     try {
       const url = `https://boards-api.greenhouse.io/v1/boards/${company}/jobs?content=true`;
-      const { data } = await axios.get(url, { timeout: 20000 });
+      const { data } = await axios.get(url, { timeout: HTTP_TIMEOUT_MS });
       const jobs = (data.jobs || [])
         .filter((item) => isRelevant(item.title, item.content))
         .map((item) => normalizeGreenhouse(company, item));
       discovered.push(...jobs);
       console.log(`[Greenhouse] ${company}: ${jobs.length} matched jobs`);
     } catch (error) {
-      console.log(`[Greenhouse] ${company}: skipped (${error.message})`);
+      console.log(`[Greenhouse] ${company}: skipped (${formatFetchError(error)})`);
     }
   }
   return discovered;
@@ -98,14 +111,14 @@ const discoverFromLever = async () => {
   for (const company of LEVER_BOARDS) {
     try {
       const url = `https://api.lever.co/v0/postings/${company}?mode=json`;
-      const { data } = await axios.get(url, { timeout: 20000 });
+      const { data } = await axios.get(url, { timeout: HTTP_TIMEOUT_MS });
       const jobs = (Array.isArray(data) ? data : [])
         .filter((item) => isRelevant(item.text, item.descriptionPlain || item.description))
         .map((item) => normalizeLever(company, item));
       discovered.push(...jobs);
       console.log(`[Lever] ${company}: ${jobs.length} matched jobs`);
     } catch (error) {
-      console.log(`[Lever] ${company}: skipped (${error.message})`);
+      console.log(`[Lever] ${company}: skipped (${formatFetchError(error)})`);
     }
   }
   return discovered;

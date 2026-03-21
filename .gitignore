@@ -8,6 +8,8 @@
 # Environment files and secrets
 **/.env
 **/.env.*
+# Allow committed templates
+!**/.env.example
 
 # Logs
 **/*.log

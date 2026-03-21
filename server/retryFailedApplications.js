@@ -52,7 +52,6 @@ const run = async () => {
           company: app.jobId.company,
           url: app.jobId.url
         },
-        userProfile: user
       });
 
       queued += 1;

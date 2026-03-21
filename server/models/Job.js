@@ -15,4 +15,6 @@ const jobSchema = new mongoose.Schema({
   detectedAt: { type: Date, default: Date.now }
 });
 
+jobSchema.index({ status: 1, detectedAt: -1 });
+
 module.exports = mongoose.model('Job', jobSchema);

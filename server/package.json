@@ -14,7 +14,8 @@
     "jobs:retry-failed": "node retryFailedApplications.js",
     "jobs:analyze-failures": "node analyzeFailures.js",
     "jobs:apply:filtered": "node applyFromSettings.js",
-    "jobs:cron-hourly": "node hourlyJobCron.js"
+    "jobs:cron-hourly": "node hourlyJobCron.js",
+    "jobs:hourly-cycle-once": "node runHourlyCycleOnce.js"
   },
   "keywords": [],
   "author": "",

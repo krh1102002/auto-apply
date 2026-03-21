@@ -1,6 +1,5 @@
 const Application = require('../models/Application');
 const Job = require('../models/Job');
-const User = require('../models/User');
 const { applicationQueue } = require('../queues/applicationQueue');
 const mongoose = require('mongoose');
 
@@ -15,8 +14,6 @@ const applyForJob = async (req, res) => {
     // Check if already applied
     let application = await Application.findOne({ userId, jobId });
     if (application) return res.status(400).json({ message: 'Already applied for this job' });
-
-    const user = await User.findById(userId).select('-password');
 
     // Create application record
     application = new Application({
@@ -33,7 +30,6 @@ const applyForJob = async (req, res) => {
         applicationId: application._id,
         userId,
         jobDetails: { title: job.title, company: job.company, url: job.url },
-        userProfile: user
       });
     } catch (queueError) {
       console.error('Queue error, proceeding with manual status update for demo');

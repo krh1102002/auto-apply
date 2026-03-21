@@ -38,6 +38,8 @@ const run = async () => {
     await mongoose.connect(process.env.MONGODB_URI);
     console.log('✅ Connected to MongoDB');
 
+    await Job.syncIndexes();
+
     const user = await User.findOne({ email: DEFAULT_USER_EMAIL });
     if (!user) {
       throw new Error(`User not found for AUTO_USER_EMAIL=${DEFAULT_USER_EMAIL}`);
@@ -49,7 +51,21 @@ const run = async () => {
       process.exit(0);
     }
 
-    const jobs = await Job.find({ status: 'Open' }).sort({ detectedAt: -1 }).limit(8000);
+    // Large sorts can exceed MongoDB's ~32MB in-memory cap without index/disk use.
+    let jobs;
+    try {
+      jobs = await Job.aggregate(
+        [{ $match: { status: 'Open' } }, { $sort: { detectedAt: -1 } }, { $limit: 8000 }],
+        { allowDiskUse: true }
+      );
+    } catch (aggErr) {
+      console.warn('⚠️ Aggregate query failed, using indexed find fallback:', aggErr.message);
+      jobs = await Job.find({ status: 'Open' })
+        .sort({ detectedAt: -1 })
+        .limit(8000)
+        .hint({ status: 1, detectedAt: -1 })
+        .lean();
+    }
     const filtered = jobs.filter((job) => isMatchBySettings(job, automation));
     let queued = 0;
 
@@ -70,7 +86,6 @@ const run = async () => {
         applicationId: application._id,
         userId: user._id,
         jobDetails: { title: job.title, company: job.company, url: job.url },
-        userProfile: user
       });
 
       queued += 1;

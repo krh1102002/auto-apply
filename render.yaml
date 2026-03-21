@@ -1,0 +1,12 @@
+# Render Blueprint — deploy API from the server folder (monorepo).
+# https://render.com/docs/blueprint-spec
+#
+# Web service only (free tier friendly). Hourly jobs: use GitHub Actions → POST /api/cron/hourly
+# (see .github/workflows/hourly-cron.yml and docs/RENDER_CHECKLIST.md). Render's own Cron service is paid.
+services:
+  - type: web
+    name: job-apply-api
+    runtime: node
+    rootDir: server
+    buildCommand: npm install
+    startCommand: npm start

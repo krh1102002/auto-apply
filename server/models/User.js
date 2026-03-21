@@ -11,6 +11,10 @@ const userSchema = new mongoose.Schema({
     roles: { type: [String], default: [] },
     locations: { type: [String], default: [] },
     minSalary: Number,
+    linkedin: { type: String },
+    github: { type: String },
+    phone: { type: String },
+    resumePath: { type: String },
     automation: {
       roleKeywords: { type: [String], default: ['software engineer', 'full stack', 'java developer'] },
       experienceLevels: { type: [String], default: ['Entry'] },

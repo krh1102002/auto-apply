@@ -15,6 +15,8 @@ import {
   Rocket,
   TrendingUp,
   Zap,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 // Lazy load 3D components
 const CareerOrb = React.lazy(() => import("../three-ui/CareerOrb"));
@@ -61,7 +63,26 @@ const StatCard = React.memo(({ stat, index }) => (
   </motion.div>
 ));
 
-const ApplicationsTable = React.memo(({ applications }) => (
+const RECENT_ACTIVITY_PAGE_SIZE = 25;
+
+const statusBadgeClass = (status) => {
+  switch (status) {
+    case "Applied":
+      return "bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.1)]";
+    case "Failed":
+      return "bg-rose-500/10 text-rose-400 border-rose-500/20";
+    case "Rejected":
+      return "bg-orange-500/10 text-orange-300 border-orange-500/20";
+    case "Interviewing":
+      return "bg-sky-500/10 text-sky-300 border-sky-500/20";
+    case "Accepted":
+      return "bg-teal-500/10 text-teal-300 border-teal-500/20";
+    default:
+      return "bg-indigo-500/10 text-indigo-400 border-indigo-500/20";
+  }
+};
+
+const ApplicationsTable = React.memo(({ applications, emptyMessage }) => (
   <div className="overflow-x-auto">
     <table className="w-full text-left border-collapse">
       <thead>
@@ -79,7 +100,8 @@ const ApplicationsTable = React.memo(({ applications }) => (
               colSpan="4"
               className="px-8 py-20 text-center text-slate-500 italic font-medium"
             >
-              The discovery engine is currently scanning for your first role...
+              {emptyMessage ||
+                "No applications match this filter on this page."}
             </td>
           </tr>
         ) : (
@@ -105,13 +127,7 @@ const ApplicationsTable = React.memo(({ applications }) => (
               </td>
               <td className="px-8 py-6">
                 <span
-                  className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-all ${
-                    app.status === "Applied"
-                      ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.1)]"
-                      : app.status === "Failed"
-                        ? "bg-rose-500/10 text-rose-400 border-rose-500/20"
-                        : "bg-indigo-500/10 text-indigo-400 border-indigo-500/20"
-                  }`}
+                  className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-all ${statusBadgeClass(app.status)}`}
                 >
                   {app.status === "Pending" && (
                     <Loader2 className="h-3 w-3 animate-spin" />
@@ -157,6 +173,8 @@ const Dashboard = () => {
     experienceLevels: "Entry",
     countries: "",
   });
+  const [activityStatusFilter, setActivityStatusFilter] = useState("all");
+  const [activityPage, setActivityPage] = useState(1);
 
   const token = localStorage.getItem("token");
 
@@ -272,6 +290,67 @@ const Dashboard = () => {
     rejected: stats?.rejected ?? localStats.rejected,
   };
 
+  const activityStatusTabs = React.useMemo(() => {
+    const counts = {
+      all: applications.length,
+      Applied: applications.filter((a) => a.status === "Applied").length,
+      Pending: applications.filter((a) => a.status === "Pending").length,
+      Failed: applications.filter((a) => a.status === "Failed").length,
+      Rejected: applications.filter((a) => a.status === "Rejected").length,
+      Interviewing: applications.filter((a) => a.status === "Interviewing").length,
+      Accepted: applications.filter((a) => a.status === "Accepted").length,
+    };
+    return [
+      { key: "all", label: "All" },
+      { key: "Applied", label: "Applied" },
+      { key: "Pending", label: "Pending" },
+      { key: "Failed", label: "Failed" },
+      { key: "Rejected", label: "Rejected" },
+      { key: "Interviewing", label: "Interview" },
+      { key: "Accepted", label: "Accepted" },
+    ].map((t) => ({ ...t, count: counts[t.key] ?? 0 }));
+  }, [applications]);
+
+  const filteredActivityApplications = React.useMemo(() => {
+    if (activityStatusFilter === "all") return applications;
+    return applications.filter((a) => a.status === activityStatusFilter);
+  }, [applications, activityStatusFilter]);
+
+  const activityTotalPages = Math.max(
+    1,
+    Math.ceil(filteredActivityApplications.length / RECENT_ACTIVITY_PAGE_SIZE),
+  );
+
+  React.useEffect(() => {
+    setActivityPage(1);
+  }, [activityStatusFilter]);
+
+  React.useEffect(() => {
+    setActivityPage((p) => Math.min(p, activityTotalPages));
+  }, [activityTotalPages]);
+
+  const paginatedActivityApplications = React.useMemo(() => {
+    const start = (activityPage - 1) * RECENT_ACTIVITY_PAGE_SIZE;
+    return filteredActivityApplications.slice(
+      start,
+      start + RECENT_ACTIVITY_PAGE_SIZE,
+    );
+  }, [filteredActivityApplications, activityPage]);
+
+  const activityRangeStart =
+    filteredActivityApplications.length === 0
+      ? 0
+      : (activityPage - 1) * RECENT_ACTIVITY_PAGE_SIZE + 1;
+  const activityRangeEnd = Math.min(
+    activityPage * RECENT_ACTIVITY_PAGE_SIZE,
+    filteredActivityApplications.length,
+  );
+
+  const recentActivityEmptyMessage =
+    applications.length === 0
+      ? "The discovery engine is currently scanning for your first role..."
+      : "No applications match this filter.";
+
   return (
     <div className="min-h-screen bg-[#030712] text-slate-100 p-8 font-sans relative overflow-hidden">
       <React.Suspense
@@ -377,9 +456,9 @@ const Dashboard = () => {
 
         {/* Applications List */}
         <div className={`${glassCardClass} overflow-hidden border-none mb-16`}>
-          <div className="p-8 border-b border-white/5 bg-white/[0.02] flex justify-between items-center">
+          <div className="p-8 border-b border-white/5 bg-white/[0.02] flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center">
             <h2 className="text-2xl font-bold font-display">Recent Activity</h2>
-            <div className="flex gap-2">
+            <div className="flex gap-2 items-center">
               <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
               <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
                 Live Updates Enabled
@@ -387,8 +466,85 @@ const Dashboard = () => {
             </div>
           </div>
 
+          <div className="px-4 sm:px-8 pt-6 pb-4 border-b border-white/5 bg-white/[0.02]">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-3">
+              Filter by status
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {activityStatusTabs.map((tab) => (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => setActivityStatusFilter(tab.key)}
+                  className={`rounded-xl px-3 py-2 text-[11px] font-bold uppercase tracking-wider border transition-all ${
+                    activityStatusFilter === tab.key
+                      ? "bg-indigo-500/30 border-indigo-500/50 text-white shadow-[0_0_20px_rgba(99,102,241,0.15)]"
+                      : "bg-white/5 border-white/10 text-slate-400 hover:bg-white/10 hover:text-slate-200"
+                  }`}
+                >
+                  {tab.label}
+                  <span
+                    className={`ml-1.5 tabular-nums ${
+                      activityStatusFilter === tab.key
+                        ? "text-indigo-200/90"
+                        : "text-slate-500"
+                    }`}
+                  >
+                    ({tab.count})
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 px-4 sm:px-8 py-4 border-b border-white/5">
+            <p className="text-xs text-slate-500 font-medium">
+              {filteredActivityApplications.length === 0 ? (
+                <>No rows for this filter.</>
+              ) : (
+                <>
+                  Showing{" "}
+                  <span className="text-slate-300">
+                    {activityRangeStart}–{activityRangeEnd}
+                  </span>{" "}
+                  of{" "}
+                  <span className="text-slate-300">
+                    {filteredActivityApplications.length}
+                  </span>{" "}
+                  (25 per page)
+                </>
+              )}
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={activityPage <= 1}
+                onClick={() => setActivityPage((p) => Math.max(1, p - 1))}
+                className="inline-flex items-center gap-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold uppercase tracking-wider text-slate-300 hover:bg-white/10 disabled:opacity-40 disabled:pointer-events-none transition-all"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Prev
+              </button>
+              <span className="text-xs text-slate-400 font-mono px-2">
+                {activityPage} / {activityTotalPages}
+              </span>
+              <button
+                type="button"
+                disabled={activityPage >= activityTotalPages}
+                onClick={() =>
+                  setActivityPage((p) => Math.min(activityTotalPages, p + 1))
+                }
+                className="inline-flex items-center gap-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold uppercase tracking-wider text-slate-300 hover:bg-white/10 disabled:opacity-40 disabled:pointer-events-none transition-all"
+              >
+                Next
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+
           <ApplicationsTable
-            applications={applications}
+            applications={paginatedActivityApplications}
+            emptyMessage={recentActivityEmptyMessage}
           />
         </div>
 

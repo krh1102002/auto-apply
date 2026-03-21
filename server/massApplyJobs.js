@@ -111,17 +111,6 @@ const massApplyGlobal = async () => {
           applicationId: application._id,
           userId: user._id,
           jobDetails: { title: job.title, company: job.company, url: job.url },
-          userProfile: {
-            name: PROFILE.name || user.name,
-            email: PROFILE.email || user.email,
-            phone: PROFILE.phone,
-            resumePath: PROFILE.resumePath,
-            preferences: {
-              linkedin: PROFILE.linkedin,
-              github: PROFILE.github,
-              ...user.preferences
-            }
-          }
         });
 
         console.log(`[QUEUED] ${job.company} - ${job.title}`);
