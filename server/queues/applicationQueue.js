@@ -13,7 +13,7 @@ const applicationQueue = new Queue('application-automation', { connection });
 
 // Worker to process application tasks
 const worker = new Worker('application-automation', async (job) => {
-  const { applicationId, userId, jobDetails, userProfile } = job.data;
+  const { applicationId, jobDetails, userProfile } = job.data;
   
   console.log(`Processing REAL-WORLD application ${applicationId} for job: ${jobDetails.title}`);
 
@@ -26,7 +26,10 @@ const worker = new Worker('application-automation', async (job) => {
       await Application.findByIdAndUpdate(applicationId, { 
         status: 'Applied',
         notes: result.message,
-        screenshot: result.screenshot
+        screenshot: result.screenshot,
+        lastError: null,
+        debugRequired: false,
+        lastTriedAt: new Date()
       });
       console.log(`Successfully applied for: ${jobDetails.title}`);
     } else {
@@ -34,7 +37,15 @@ const worker = new Worker('application-automation', async (job) => {
     }
   } catch (error) {
     console.error(`Application failed for ${applicationId}:`, error.message);
-    await Application.findByIdAndUpdate(applicationId, { status: 'Failed', notes: error.message });
+    await Application.findByIdAndUpdate(applicationId, {
+      $set: {
+        status: 'Failed',
+        notes: error.message,
+        lastError: error.message,
+        lastTriedAt: new Date()
+      },
+      $inc: { retryCount: 1 }
+    });
   }
 }, { connection });
 

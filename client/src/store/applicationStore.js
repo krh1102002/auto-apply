@@ -4,6 +4,15 @@ import API_BASE_URL from "../config/api";
 
 const useApplicationStore = create((set, get) => ({
   applications: [],
+  stats: {
+    total: 0,
+    applied: 0,
+    pending: 0,
+    failed: 0,
+    rejected: 0,
+    interviewing: 0,
+    accepted: 0,
+  },
   loading: false,
   error: null,
 
@@ -18,6 +27,18 @@ const useApplicationStore = create((set, get) => ({
       set({ applications: res.data, loading: false });
     } catch (err) {
       set({ error: "Failed to fetch applications", loading: false });
+    }
+  },
+
+  fetchStats: async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.get(`${API_BASE_URL}/api/applications/stats`, {
+        headers: { "x-auth-token": token },
+      });
+      set({ stats: res.data });
+    } catch (_err) {
+      // keep old stats on background failures
     }
   },
 
@@ -60,6 +81,7 @@ const useApplicationStore = create((set, get) => ({
       );
       await Promise.allSettled(promises);
       get().fetchApplications();
+      get().fetchStats();
       set({ loading: false });
       return true;
     } catch (err) {

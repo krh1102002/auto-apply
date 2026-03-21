@@ -7,10 +7,16 @@ const userSchema = new mongoose.Schema({
   password: { type: String, required: true },
   resumeUrl: { type: String },
   preferences: {
-    skills: [String],
-    roles: [String],
-    locations: [String],
-    minSalary: Number
+    skills: { type: [String], default: [] },
+    roles: { type: [String], default: [] },
+    locations: { type: [String], default: [] },
+    minSalary: Number,
+    automation: {
+      roleKeywords: { type: [String], default: ['software engineer', 'full stack', 'java developer'] },
+      experienceLevels: { type: [String], default: ['Entry'] },
+      countries: { type: [String], default: [] },
+      enabled: { type: Boolean, default: true }
+    }
   },
   createdAt: { type: Date, default: Date.now }
 });

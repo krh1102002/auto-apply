@@ -9,7 +9,12 @@
     "candidate:setup": "node setupCandidateProfile.js",
     "jobs:discover": "node discoverTargetJobs.js",
     "jobs:apply:mass": "node massApplyJobs.js",
-    "jobs:status": "node checkStatus.js"
+    "jobs:status": "node checkStatus.js",
+    "jobs:autopilot": "node autoPilot.js",
+    "jobs:retry-failed": "node retryFailedApplications.js",
+    "jobs:analyze-failures": "node analyzeFailures.js",
+    "jobs:apply:filtered": "node applyFromSettings.js",
+    "jobs:cron-hourly": "node hourlyJobCron.js"
   },
   "keywords": [],
   "author": "",
@@ -30,6 +35,7 @@
     "mongoose": "^8.21.0",
     "morgan": "^1.10.1",
     "multer": "^2.0.2",
+    "node-cron": "^4.2.1",
     "pdf-parse": "^2.4.5",
     "puppeteer": "^24.34.0"
   }

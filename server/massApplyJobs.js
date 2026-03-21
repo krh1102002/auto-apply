@@ -5,6 +5,7 @@ const Application = require('./models/Application');
 const User = require('./models/User');
 const { applicationQueue } = require('./queues/applicationQueue');
 const EXIT_AFTER_QUEUE = process.env.EXIT_AFTER_QUEUE === 'true';
+const CLEAR_EXISTING_APPLICATIONS = process.env.CLEAR_EXISTING_APPLICATIONS === 'true';
 
 const TARGET_ROLE_KEYWORDS = [
   'software engineer',
@@ -73,9 +74,12 @@ const massApplyGlobal = async () => {
       process.exit(1);
     }
 
-    // Clear old applications
-    await Application.deleteMany({ userId: user._id });
-    console.log('🗑️ Cleared previous applications.');
+    if (CLEAR_EXISTING_APPLICATIONS) {
+      await Application.deleteMany({ userId: user._id });
+      console.log('🗑️ Cleared previous applications.');
+    } else {
+      console.log('ℹ️ Preserving previous applications for continuous tracking.');
+    }
 
     // Find all unapplied open jobs
     const jobs = await Job.find({ status: 'Open' });
@@ -89,6 +93,11 @@ const massApplyGlobal = async () => {
 
     for (const job of easyApplyFirst) {
       try {
+        const existing = await Application.findOne({ userId: user._id, jobId: job._id });
+        if (existing) {
+          continue;
+        }
+
         const application = new Application({
           userId: user._id,
           jobId: job._id,

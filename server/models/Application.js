@@ -11,7 +11,11 @@ const applicationSchema = new mongoose.Schema({
   appliedAt: { type: Date, default: Date.now },
   notes: { type: String },
   platformUsed: { type: String },
-  screenshot: { type: String }
+  screenshot: { type: String },
+  retryCount: { type: Number, default: 0 },
+  lastError: { type: String },
+  lastTriedAt: { type: Date },
+  debugRequired: { type: Boolean, default: false }
 });
 
 module.exports = mongoose.model('Application', applicationSchema);
