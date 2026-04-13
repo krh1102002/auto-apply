@@ -114,8 +114,12 @@ const solveLever = async (page, userProfile) => {
 };
 
 const automateApplication = async (applicationId, url, userProfile) => {
+  const os = require('os');
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), `puppeteer-profile-${applicationId}-`));
+  
   const browser = await puppeteer.launch({ 
     headless: "new",
+    userDataDir: tempDir,
     args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-web-security']
   });
   
@@ -159,7 +163,14 @@ const automateApplication = async (applicationId, url, userProfile) => {
     console.error(`Automation error for ${url}:`, error.message);
     return { success: false, message: error.message };
   } finally {
-    await browser.close();
+    if (browser) await browser.close();
+    try {
+      if (fs.existsSync(tempDir)) {
+        fs.rmSync(tempDir, { recursive: true, force: true });
+      }
+    } catch (cleanupErr) {
+      console.warn('Temporary profile cleanup failed:', cleanupErr.message);
+    }
   }
 };
 

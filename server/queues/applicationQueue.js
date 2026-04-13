@@ -7,7 +7,12 @@ const { loadUserProfileForAutomation } = require('../utils/automationUserProfile
 const connection = new IORedis(process.env.REDIS_URL || 'redis://127.0.0.1:6379', {
   maxRetriesPerRequest: null,
   enableReadyCheck: false,
-  retryStrategy: (times) => null, // Don't retry indefinitely if redis is missing
+  retryStrategy: (times) => Math.min(times * 50, 2000),
+  reconnectOnError: (err) => {
+    const targetError = 'READONLY';
+    if (err.message.includes(targetError)) return true;
+    return false;
+  }
 });
 
 /** Small Redis (e.g. 30MB): tiny job payloads + aggressive cleanup of finished jobs */

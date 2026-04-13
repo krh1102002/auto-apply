@@ -18,19 +18,35 @@ const isMatchBySettings = (job, settings) => {
   const countries = settings.countries || [];
 
   if (roleKeywords.length > 0) {
-    const haystack = `${job.title || ''} ${job.description || ''}`;
-    if (!textHasAny(haystack, roleKeywords)) return false;
+    const haystack = `${job.title || ''} ${job.description || ''}`.toLowerCase();
+    if (!roleKeywords.some((k) => haystack.includes(String(k).toLowerCase()))) {
+      return { match: false, reason: 'Role Mismatch' };
+    }
   }
 
-  if (experienceLevels.length > 0 && !experienceLevels.includes(job.experienceLevel)) {
-    return false;
+  if (experienceLevels.length > 0) {
+    // Strict block for ambiguous seniority on Entry-level accounts
+    if (experienceLevels.includes('Entry') && (job.experienceLevel === 'Unknown' || job.experienceLevel === 'Mid/Senior')) {
+      return { match: false, reason: `Exp Mismatch (Ambiguous: ${job.experienceLevel})` };
+    }
+    
+    if (!experienceLevels.includes(job.experienceLevel)) {
+      return { match: false, reason: `Exp Mismatch (${job.experienceLevel})` };
+    }
   }
 
-  if (countries.length > 0 && !textHasAny(job.location || '', countries)) {
-    return false;
+  if (countries.length > 0) {
+    const loc = (job.location || '').toLowerCase();
+    const isIndiaHub = countries.some(c => c.toLowerCase() === 'india') && 
+      /bangalore|bengaluru|pune|mumbai|hyderabad|gurgaon|noida|chennai|delhi/i.test(loc);
+    const isRemote = /remote|global|anywhere/i.test(loc);
+    
+    if (!countries.some((c) => loc.includes(String(c).toLowerCase())) && !isIndiaHub && !isRemote) {
+      return { match: false, reason: `Location Mismatch (${job.location})` };
+    }
   }
 
-  return true;
+  return { match: true };
 };
 
 const run = async () => {
@@ -66,29 +82,43 @@ const run = async () => {
         .hint({ status: 1, detectedAt: -1 })
         .lean();
     }
-    const filtered = jobs.filter((job) => isMatchBySettings(job, automation));
+    const matchingResults = jobs.map((job) => ({ job, ...isMatchBySettings(job, automation) }));
+    const filtered = matchingResults.filter(r => r.match).map(r => r.job);
+    const skipped = matchingResults.filter(r => !r.match);
+
+    if (skipped.length > 0) {
+      console.log(`ℹ️ Skipped ${skipped.length} roles due to filters. Sample reasons:`);
+      skipped.slice(0, 5).forEach(s => console.log(`  - [${s.reason}] ${s.job.title}`));
+    }
+
     let queued = 0;
 
     for (const job of filtered) {
-      const existing = await Application.findOne({ userId: user._id, jobId: job._id });
-      if (existing) continue;
-
-      const application = new Application({
-        userId: user._id,
-        jobId: job._id,
-        status: 'Pending',
-        platformUsed: job.source || 'Direct',
-        notes: `Auto-filtered apply (${new Date().toISOString()})`
-      });
-      await application.save();
+      let application = await Application.findOne({ userId: user._id, jobId: job._id });
+      
+      if (application) {
+        if (application.status === 'Pending') {
+          console.log(`ℹ️ Re-queuing existing pending application for: ${job.company}`);
+        } else {
+          continue; // Job already applied or failed
+        }
+      } else {
+        application = new Application({
+          userId: user._id,
+          jobId: job._id,
+          status: 'Pending',
+          platformUsed: job.source || 'Direct',
+          notes: `Auto-filtered apply (${new Date().toISOString()})`
+        });
+        await application.save();
+        queued += 1;
+      }
 
       await applicationQueue.add('submit-application', {
         applicationId: application._id,
         userId: user._id,
         jobDetails: { title: job.title, company: job.company, url: job.url },
       });
-
-      queued += 1;
     }
 
     console.log(`✅ Filtered apply complete. Matched: ${filtered.length}, Newly queued: ${queued}`);

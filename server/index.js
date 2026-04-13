@@ -14,6 +14,9 @@ try {
   console.log('✅ EX6');
   require('dotenv').config();
   console.log('✅ EX7');
+  
+  // Background Workers
+  require('./queues/applicationQueue');
 
   const app = express();
   const PORT = Number(process.env.PORT) || 5000;

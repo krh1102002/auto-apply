@@ -122,11 +122,20 @@ const isWithinFreshnessWindow = (date) => {
 const categorizeExperienceLevel = (title = '', description = '') => {
   const text = `${title} ${description}`.toLowerCase();
   
-  const isSenior = ['senior', 'sr.', 'lead', 'staff', 'principal', 'manager', 'director', 'vp', 'head', '5+ years', '8+ years', '10+ years'].some(k => text.includes(k));
-  const isMid = ['mid', 'intermediate', 'ii', 'iii', 'level 2', 'level 3', '3+ years', '4+ years'].some(k => text.includes(k));
+  const isSenior = [
+    'senior', 'sr.', 'lead', 'staff', 'principal', 'manager', 'director', 'vp', 'head', 
+    'architect', 'expert', 'lead', 'director', 'l4', 'l5', 'l6', 'level 4', 'level 5',
+    '8+ years', '10+ years', '12+ years'
+  ].some(k => text.includes(k));
+
+  const isMid = [
+    'mid', 'intermediate', 'ii', 'iii', 'level 2', 'level 3', 'l2', 'l3',
+    '3+ years', '4+ years', '5+ years', 'specialist'
+  ].some(k => text.includes(k));
+
   const isFresher = [
     'fresher', 'entry', 'junior', 'intern', 'graduate', 'trainee', 'associate', 
-    '0 years', '0-1 years', '0-2 years', 'l1', 'level 1', 'level i', 'internship'
+    '0 years', '0-1 years', '0-2 years', 'l1', 'level 1', 'level i', 'internship', 'apprentice'
   ].some(k => text.includes(k));
 
   // Prioritize Senior -> Mid -> Entry
@@ -134,7 +143,12 @@ const categorizeExperienceLevel = (title = '', description = '') => {
   if (isMid) return 'Mid';
   if (isFresher) return 'Entry';
   
-  return 'Entry'; // Default to Entry Level for maximal fresher visibility
+  // If the title contains specific engineering "levels" or manager keywords, it's NOT Entry
+  if (/ director| manager| principal| lead | staff | architect| ii | iii | iv | v /i.test(title)) {
+    return 'Mid/Senior';
+  }
+
+  return 'Unknown'; // Safety first: don't default to Entry anymore
 };
 
 const normalizeGreenhouse = (company, item) => {
