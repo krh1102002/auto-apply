@@ -10,9 +10,12 @@ const Navbar = () => {
 
   return (
     <nav className={`fixed left-0 top-0 h-screen w-20 flex flex-col items-center py-10 ${glassClass} z-50`}>
-      <div className="h-12 w-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl mb-16 flex items-center justify-center font-black text-white italic shadow-lg shadow-indigo-500/20 active:scale-95 transition-all cursor-pointer">
+      <NavLink 
+        to="/fresher-jobs"
+        className="h-12 w-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl mb-16 flex items-center justify-center font-black text-white italic shadow-lg shadow-indigo-500/20 active:scale-95 transition-all cursor-pointer"
+      >
         TD
-      </div>
+      </NavLink>
       
       <div className="flex-1 flex flex-col gap-10">
         <NavLink 

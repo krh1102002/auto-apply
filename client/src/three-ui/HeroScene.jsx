@@ -43,7 +43,7 @@ const GlowingGrid = () => {
   );
 };
 
-const HeroScene = ({ title = "Dashboard" }) => {
+const HeroScene = ({ title = "Tech Hub" }) => {
   return (
     <div className="h-48 w-full rounded-3xl overflow-hidden">
       <Canvas camera={{ position: [0, 0, 8], fov: 50 }} dpr={[1, 2]}>
