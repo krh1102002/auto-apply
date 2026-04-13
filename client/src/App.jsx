@@ -1,7 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import Dashboard from './pages/Dashboard';
 import JobDiscovery from './pages/JobDiscovery';
 import Profile from './pages/Profile';
 import AdminDashboard from './pages/AdminDashboard';
@@ -27,15 +26,15 @@ function App() {
     <Router>
       <Layout>
         <Routes>
-          <Route path="/login" element={token ? <Navigate to="/dashboard" /> : <Login />} />
-          <Route path="/register" element={token ? <Navigate to="/dashboard" /> : <Register />} />
+          <Route path="/login" element={token ? <Navigate to="/fresher-jobs" /> : <Login />} />
+          <Route path="/register" element={token ? <Navigate to="/fresher-jobs" /> : <Register />} />
           <Route 
-            path="/dashboard" 
-            element={token ? <Dashboard /> : <Navigate to="/login" />} 
+            path="/fresher-jobs" 
+            element={token ? <JobDiscovery mode="fresher" /> : <Navigate to="/login" />} 
           />
           <Route 
-            path="/discovery" 
-            element={token ? <JobDiscovery /> : <Navigate to="/login" />} 
+            path="/experienced-jobs" 
+            element={token ? <JobDiscovery mode="experience" /> : <Navigate to="/login" />} 
           />
           <Route 
             path="/profile" 
@@ -45,7 +44,7 @@ function App() {
             path="/admin" 
             element={token ? <AdminDashboard /> : <Navigate to="/login" />} 
           />
-          <Route path="/" element={<Navigate to="/dashboard" />} />
+          <Route path="/" element={<Navigate to="/fresher-jobs" />} />
         </Routes>
       </Layout>
     </Router>

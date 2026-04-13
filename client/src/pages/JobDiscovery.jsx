@@ -1,214 +1,369 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import useJobStore from '../store/jobStore';
-import useApplicationStore from '../store/applicationStore';
-import { Search, Globe, MapPin, Building2, ExternalLink, Play, CheckCircle2, Loader2, Sparkles } from 'lucide-react';
-import FloatingShapes from '../three-ui/FloatingShapes';
+import { Search, Globe, MapPin, Building2, ExternalLink, Play, Loader2, Sparkles, CheckCircle2 } from 'lucide-react';
 
-const glassClass = "bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl";
-const glassCardClass = `${glassClass} rounded-3xl transition-all duration-500 border-white/5 hover:bg-white/10 hover:border-white/20`;
-const btnPrimaryClass = "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold py-3 px-6 rounded-2xl transition-all duration-300 shadow-lg shadow-indigo-500/20 active:scale-[0.98]";
+const glassClass = "bg-[#0f172a]/50 backdrop-blur-xl border border-white/5 shadow-2xl";
+const glassCardClass = `${glassClass} rounded-2xl transition-all duration-300 hover:bg-[#0f172a]/80 hover:border-white/10`;
+const btnPrimaryClass = "bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 shadow-lg shadow-indigo-600/20 active:scale-[0.98]";
 
-const JobDiscovery = () => {
-  const { jobs, loading, fetchJobs, crawlUrl } = useJobStore();
-  const { apply, applications, fetchApplications, massApply } = useApplicationStore();
-  const [crawlInput, setCrawlInput] = useState('');
+const JobDiscovery = ({ mode = 'fresher' }) => {
+  const { 
+    jobs, 
+    loading, 
+    pagination = { totalJobs: 0, totalPages: 1, currentPage: 1 }, 
+    stats = {},
+    fetchJobs, 
+    refreshJobs,
+    markAsApplied
+  } = useJobStore();
+  
   const [searchQuery, setSearchQuery] = useState('');
-  const [daysAgo, setDaysAgo] = useState('');
   const [experienceLevel, setExperienceLevel] = useState('');
-  const [massApplying, setMassApplying] = useState(false);
+  const [tech, setTech] = useState([]);
+  const [applicationStatus, setApplicationStatus] = useState('Unapplied');
+  const [region, setRegion] = useState('');
+  const [role, setRole] = useState('');
+  const [page, setPage] = useState(1);
+
+  // Tech options list
+  const techStacks = [
+    'React', 'Node', 'Java', 'Python', 'Go', 'DevOps', 'Mobile', 
+    'Cyber', 'Data', 'AI', 'Cloud', 'Blockchain'
+  ];
+
+  // Sync mode with experienceLevel filter
+  useEffect(() => {
+    setPage(1); // Reset to first page when mode changes
+    if (mode === 'fresher') {
+      setExperienceLevel('Entry');
+    } else {
+      setExperienceLevel('');
+    }
+  }, [mode]);
 
   useEffect(() => {
-    fetchJobs({ daysAgo, experienceLevel });
-    fetchApplications();
-  }, [daysAgo, experienceLevel]);
+    fetchJobs({ 
+      title: searchQuery.trim(), 
+      experienceLevel: experienceLevel,
+      tech: tech.filter(t => t.trim() !== ''),
+      applicationStatus,
+      region,
+      role,
+      page 
+    });
+  }, [searchQuery, experienceLevel, tech, applicationStatus, region, role, page, mode]);
 
-  const handleCrawl = (e) => {
-    e.preventDefault();
-    if (crawlInput) {
-      crawlUrl(crawlInput);
-      setCrawlInput('');
+  const toggleTech = (t) => {
+    setTech(prev => 
+      prev.includes(t) ? prev.filter(item => item !== t) : [...prev, t]
+    );
+    setPage(1);
+  };
+
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= pagination.totalPages) {
+      setPage(newPage);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
-  const filteredJobs = jobs.filter(job => 
-    job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    job.company.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
   return (
-    <div className="min-h-screen bg-[#030712] text-slate-100 p-8 font-sans relative overflow-hidden">
-      <FloatingShapes />
-      <div className="max-w-7xl mx-auto relative z-10">
-        <header className="mb-16">
+    <div className="min-h-screen bg-[#030712] text-slate-100 p-8 font-sans">
+      <div className="max-w-7xl mx-auto">
+        <header className="mb-12 flex justify-between items-end">
           <motion.div
-            initial={{ opacity: 0, y: -20 }}
+            initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
           >
-            <h1 className="text-5xl font-extrabold font-display text-gradient tracking-tight mb-4">
-              Opportunity Discovery
+            <h1 className="text-4xl font-black tracking-tight mb-2">
+              {mode === 'fresher' ? 'Tech Freshers Grid' : 'Experienced Tech Grid'}
             </h1>
-            <p className="text-slate-400 font-medium leading-relaxed">
-              Our global engine is active. Scan specific career pages or explore curated roles.
+            <p className="text-slate-500 text-sm font-medium">
+              {mode === 'fresher' 
+                ? 'Strictly verified entry-level software engineering roles from the last 30 days.' 
+                : 'Mid-to-senior technical roles and lead positions across the global tech sector.'}
             </p>
           </motion.div>
+          
+          <div className="text-right">
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400/60 block mb-1">Database Pulse</span>
+            <div className="text-2xl font-black text-white">{pagination?.totalJobs?.toLocaleString() ?? '0'} <span className="text-slate-600">Roles</span></div>
+          </div>
         </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-12">
-          {/* Sidebar / Filters */}
-          <div className="space-y-8">
-            <div className={`${glassCardClass} p-8`}>
-              <h3 className="text-lg font-bold mb-6 font-display flex items-center gap-2">
-                 <div className="h-2 w-2 rounded-full bg-indigo-500" /> Targeted Scan
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+          {/* Sidebar */}
+          <div className="space-y-6">
+            <div className={`${glassCardClass} p-6`}>
+              <h3 className="text-xs font-black uppercase tracking-widest text-indigo-400 mb-4 flex items-center gap-2">
+                 <div className="h-1.5 w-1.5 rounded-full bg-indigo-400" /> Action Center
               </h3>
-              <form onSubmit={handleCrawl} className="space-y-4">
-                <div className="relative group">
-                  <Globe className="absolute left-4 top-4 h-5 w-5 text-slate-500 group-focus-within:text-indigo-400 transition-colors" />
-                  <input 
-                    type="url" 
-                    placeholder="Company jobs URL..."
-                    className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 pl-12 text-sm focus:outline-none focus:border-indigo-500/50 transition-all placeholder:text-slate-600"
-                    value={crawlInput}
-                    onChange={(e) => setCrawlInput(e.target.value)}
-                  />
-                </div>
-                <button 
-                  className="w-full py-4 bg-white/5 border border-white/10 hover:bg-white/10 rounded-2xl flex items-center justify-center gap-2 transition-all font-bold text-sm"
-                  disabled={loading}
-                >
-                  {loading ? <Loader2 className="h-4 w-4 animate-spin text-indigo-400" /> : <Play className="h-4 w-4 text-indigo-400 fill-current" />}
-                  {loading ? 'Processing...' : 'Initiate Scan'}
-                </button>
-              </form>
+              <button 
+                onClick={() => refreshJobs()}
+                className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 rounded-xl flex items-center justify-center gap-2 transition-all font-bold text-xs shadow-lg shadow-indigo-600/20 active:scale-95 mb-4"
+                disabled={loading}
+              >
+                {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                {loading ? 'Discovering...' : 'Sync Latest Roles'}
+              </button>
             </div>
 
-            <div className={`${glassCardClass} p-8`}>
-              <h3 className="text-lg font-bold mb-6 font-display flex items-center gap-2">
-                 <div className="h-2 w-2 rounded-full bg-purple-500" /> Refined Search
+            <div className={`${glassCardClass} p-6`}>
+              <h3 className="text-xs font-black uppercase tracking-widest text-indigo-400 mb-4 flex items-center gap-2">
+                 <div className="h-1.5 w-1.5 rounded-full bg-indigo-400" /> Geographic Focus
+              </h3>
+              <div className="grid grid-cols-2 gap-2 p-1 bg-white/5 rounded-xl border border-white/5">
+                <button 
+                  onClick={() => { setRegion(''); setPage(1); }}
+                  className={`py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${region === '' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+                >
+                  Global
+                </button>
+                <button 
+                  onClick={() => { setRegion('India'); setPage(1); }}
+                  className={`py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${region === 'India' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+                >
+                  India 🇮🇳
+                </button>
+              </div>
+            </div>
+
+            <div className={`${glassCardClass} p-6`}>
+              <h3 className="text-xs font-black uppercase tracking-widest text-indigo-400 mb-4 flex items-center gap-2">
+                 <div className="h-1.5 w-1.5 rounded-full bg-indigo-400" /> Role Focus
+              </h3>
+              <div className="space-y-1">
+                <button 
+                  onClick={() => { setRole(''); setPage(1); }}
+                  className={`w-full flex items-center justify-between p-2.5 rounded-xl transition-all ${role === '' ? 'bg-indigo-600/20 text-indigo-400 border border-indigo-500/20' : 'text-slate-400 hover:bg-white/5'}`}
+                >
+                  <span className="text-[10px] font-black uppercase tracking-widest">All Tracks</span>
+                  <span className="text-[10px] bg-white/5 py-0.5 px-2 rounded-full font-bold opacity-50">{pagination.totalJobs}</span>
+                </button>
+                {Object.keys(stats).map(r => (
+                  <button 
+                    key={r}
+                    onClick={() => { setRole(role === r ? '' : r); setPage(1); }}
+                    className={`w-full flex items-center justify-between p-2.5 rounded-xl transition-all ${role === r ? 'bg-indigo-600/20 text-indigo-400 border border-indigo-500/20' : 'text-slate-400 hover:bg-white/5'}`}
+                  >
+                    <span className="text-[10px] font-black uppercase tracking-widest">{r}</span>
+                    <span className={`text-[10px] py-0.5 px-2 rounded-full font-bold ${stats[r] > 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white/5 opacity-50'}`}>
+                      {stats[r]}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className={`${glassCardClass} p-6`}>
+              <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-4 flex items-center gap-2">
+                 <div className="h-1.5 w-1.5 rounded-full bg-slate-400" /> Filters
               </h3>
               <div className="space-y-6">
-                <div className="space-y-3">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Timeframe</label>
-                  <select 
-                    className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm focus:outline-none focus:border-indigo-500/50 transition-all text-slate-200"
-                    value={daysAgo}
-                    onChange={(e) => setDaysAgo(e.target.value)}
-                  >
-                    <option value="" className="bg-[#0f172a]">Global View (All)</option>
-                    <option value="1" className="bg-[#0f172a]">Last 24 Hours</option>
-                    <option value="7" className="bg-[#0f172a]">Past 7 Days</option>
-                    <option value="30" className="bg-[#0f172a]">Past 30 Days</option>
-                  </select>
-                </div>
-                <div className="space-y-3">
+                <div className="space-y-2">
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Rank</label>
                   <select 
-                    className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm focus:outline-none focus:border-indigo-500/50 transition-all text-slate-200"
+                    className="w-full bg-white/5 border border-white/5 rounded-xl p-3 text-xs focus:outline-none focus:border-indigo-500/50 transition-all text-slate-200"
                     value={experienceLevel}
-                    onChange={(e) => setExperienceLevel(e.target.value)}
+                    onChange={(e) => {
+                      setExperienceLevel(e.target.value);
+                      setPage(1);
+                    }}
                   >
-                    <option value="" className="bg-[#0f172a]">All Tiers</option>
-                    <option value="Entry" className="bg-[#0f172a]">Graduate / Freshers</option>
-                    <option value="Mid" className="bg-[#0f172a]">Mid-Level Ops</option>
-                    <option value="Senior" className="bg-[#0f172a]">Lead / Senior</option>
+                    {mode === 'fresher' ? (
+                      <option value="Entry" className="bg-[#0f172a]">Entry / Graduate Only</option>
+                    ) : (
+                      <>
+                        <option value="" className="bg-[#0f172a]">All Experienced Tiers</option>
+                        <option value="Mid" className="bg-[#0f172a]">Mid-Level</option>
+                        <option value="Senior" className="bg-[#0f172a]">Senior / Lead</option>
+                      </>
+                    )}
                   </select>
+                </div>
+
+                <div className="space-y-4">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1 flex items-center justify-between">
+                    Technology
+                    {tech.length > 0 && (
+                      <button 
+                        onClick={() => { setTech([]); setPage(1); }}
+                        className="text-[9px] text-indigo-400 hover:text-indigo-300 transition-colors font-black"
+                      >
+                        CLEAR ALL
+                      </button>
+                    )}
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {techStacks.map(stack => {
+                      const isActive = tech.includes(stack);
+                      return (
+                        <button
+                          key={stack}
+                          onClick={() => toggleTech(stack)}
+                          className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all border ${
+                            isActive 
+                              ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-600/20' 
+                              : 'bg-white/5 border-white/5 text-slate-400 hover:bg-white/10 hover:border-white/10'
+                          }`}
+                        >
+                          {stack}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Workflow</label>
+                  <div className="grid grid-cols-1 gap-2">
+                    {[
+                      { id: 'Unapplied', label: 'New / Unapplied' },
+                      { id: 'Applied', label: 'Handled / Applied' },
+                      { id: 'All', label: 'All Global Roles' }
+                    ].map(status => {
+                      const isActive = applicationStatus === status.id;
+                      return (
+                        <button
+                          key={status.id}
+                          onClick={() => { setApplicationStatus(status.id); setPage(1); }}
+                          className={`w-full px-4 py-3 rounded-xl text-[11px] font-bold transition-all border text-left flex items-center justify-between ${
+                            isActive 
+                              ? 'bg-indigo-600/10 border-indigo-500/50 text-indigo-400 shadow-inner' 
+                              : 'bg-white/5 border-white/5 text-slate-400 hover:bg-white/10'
+                          }`}
+                        >
+                          {status.label}
+                          {isActive && <div className="h-1.5 w-1.5 rounded-full bg-indigo-400 shadow-[0_0_10px_rgba(129,140,248,0.8)]" />}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Main Content */}
-          <div className="lg:col-span-3 space-y-8">
-            <div className="flex gap-4">
-              <div className="relative flex-1 group">
-                <Search className="absolute left-5 top-5 h-6 w-6 text-slate-500 group-focus-within:text-indigo-400 transition-colors" />
-                <input 
-                  type="text" 
-                  placeholder="Filter by role, company, or tech stack..."
-                  className="w-full bg-white/5 border border-white/10 rounded-3xl p-5 pl-14 text-lg focus:outline-none focus:border-indigo-500/50 transition-all placeholder:text-slate-600 shadow-inner shadow-black/20 font-medium"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-              <motion.button 
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={async () => {
-                  setMassApplying(true);
-                  const unappliedIds = filteredJobs
-                    .filter(j => !applications.some(a => a.jobId?._id === j._id))
-                    .map(j => j._id);
-                  if (unappliedIds.length > 0) {
-                    await massApply(unappliedIds);
-                  }
-                  setMassApplying(false);
+          <div className="lg:col-span-3 space-y-6">
+            <div className="relative group w-full mb-8">
+              <Search className="absolute left-4 top-4 h-5 w-5 text-slate-500 group-focus-within:text-indigo-400 transition-colors" />
+              <input 
+                type="text" 
+                placeholder="Search by title or company..."
+                className="w-full bg-white/5 border border-white/5 rounded-2xl p-4 pl-12 text-sm focus:outline-none focus:border-indigo-500/50 transition-all placeholder:text-slate-600 shadow-inner shadow-black/20 font-medium"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setPage(1);
                 }}
-                disabled={massApplying || filteredJobs.every(j => applications.some(a => a.jobId?._id === j._id))}
-                className={`${btnPrimaryClass} px-10 flex items-center gap-3 disabled:opacity-50 min-w-[200px]`}
-              >
-                {massApplying ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5" />}
-                Mass Apply ({filteredJobs.filter(j => !applications.some(a => a.jobId?._id === j._id)).length})
-              </motion.button>
+              />
             </div>
 
-            <div className="grid grid-cols-1 gap-6">
+            <div className="grid grid-cols-1 gap-4">
               {loading && (
                 <div className="text-center py-20">
-                   <Loader2 className="h-10 w-10 animate-spin text-indigo-400 mx-auto mb-4" />
-                   <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">Curating high-growth roles...</p>
+                   <Loader2 className="h-8 w-8 animate-spin text-indigo-500 mx-auto mb-4" />
+                   <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">
+                     {region === 'India' ? 'Pulsing India Tech Hub...' : 'Filtering global tech pulse...'}
+                   </p>
                 </div>
               )}
-              {!loading && filteredJobs.length === 0 && (
+              {!loading && (!jobs || jobs.length === 0) && (
                 <div className={`text-center py-24 ${glassCardClass}`}>
-                  <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">No matching nodes found in the global grid.</p>
+                  <p className="text-slate-600 font-bold uppercase tracking-widest text-[10px]">No recent tech roles found matching your criteria.</p>
                 </div>
               )}
-              {filteredJobs.map((job) => (
+              {jobs?.map((job) => (
                 <motion.div 
                   key={job._id}
                   layout
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  className={`${glassCardClass} p-8 group border-transparent hover:border-indigo-500/20 active:scale-[0.99] cursor-pointer`}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className={`${glassCardClass} p-6 group flex items-center justify-between gap-6`}
                 >
-                  <div className="flex justify-between items-center">
-                    <div className="flex gap-6 items-center">
-                      <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center font-black text-2xl text-indigo-400 border border-indigo-500/10 group-hover:scale-110 transition-transform">
-                        {job.company?.[0]}
-                      </div>
-                      <div>
-                        <h3 className="text-2xl font-black font-display group-hover:text-indigo-400 transition-colors tracking-tight">{job.title}</h3>
-                        <div className="flex items-center gap-6 mt-3 text-slate-500 font-bold text-[10px] uppercase tracking-widest">
-                          <span className="flex items-center gap-2"><Building2 className="h-4 w-4" /> {job.company}</span>
-                          <span className="flex items-center gap-2"><MapPin className="h-4 w-4" /> {job.location || 'Remote'}</span>
+                  <div className="flex gap-5 items-center">
+                    <div className="h-12 w-12 rounded-xl bg-white/5 flex items-center justify-center font-black text-lg border border-white/5 text-slate-400 group-hover:border-indigo-500/20 group-hover:text-indigo-400 transition-all">
+                      {job.company?.[0]}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-3">
+                        <h3 className="text-lg font-bold tracking-tight">{job.title}</h3>
+                        <div className="flex gap-2">
+                          <span className="px-2 py-0.5 rounded bg-white/5 text-[9px] font-black uppercase tracking-tight text-slate-500 border border-white/5">
+                            {job.experienceLevel}
+                          </span>
+                          {job.companyInfo?.industry && (
+                            <span className="px-2 py-0.5 rounded bg-indigo-500/10 text-[9px] font-black uppercase tracking-tight text-indigo-400 border border-indigo-500/20">
+                              {job.companyInfo.industry}
+                            </span>
+                          )}
                         </div>
                       </div>
+                      <div className="flex items-center gap-4 mt-1.5 text-slate-500 font-bold text-[11px] uppercase tracking-wide">
+                        <span className="flex items-center gap-1.5"><Building2 className="h-3.5 w-3.5" /> {job.company}</span>
+                        <span className={`flex items-center gap-1.5 ${job.location?.toLowerCase().includes('india') || ['bangalore', 'pune', 'hyderabad', 'noida', 'chennai', 'mumbai', 'delhi', 'gurgaon'].some(hub => job.location?.toLowerCase().includes(hub)) ? 'text-emerald-400' : ''}`}>
+                          <MapPin className="h-3.5 w-3.5" /> {job.location || 'Remote'}
+                        </span>
+                      </div>
+                      {job.companyInfo?.description && (
+                        <p className="mt-3 text-[11px] text-slate-500 line-clamp-1 italic max-w-xl">
+                          "{job.companyInfo.description.substring(0, 120)}..."
+                        </p>
+                      )}
                     </div>
-                    <div className="flex items-center gap-6">
-                      <a 
-                        href={job.url} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all text-slate-500 hover:text-white"
-                      >
-                        <ExternalLink className="h-6 w-6" />
-                      </a>
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    {job.isApplied ? (
+                      <div className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-green-500/10 border border-green-500/20 text-green-400 text-[10px] font-black uppercase tracking-widest">
+                        <CheckCircle2 className="h-3.5 w-3.5" /> Completed
+                      </div>
+                    ) : (
                       <button 
-                        onClick={() => apply(job._id)}
-                        disabled={applications.some(a => a.jobId?._id === job._id)}
-                        className={`px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all ${
-                          applications.some(a => a.jobId?._id === job._id)
-                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 cursor-default'
-                            : 'bg-indigo-600 hover:bg-indigo-500 shadow-lg shadow-indigo-600/20 active:scale-95'
-                        }`}
+                        onClick={() => markAsApplied(job._id)}
+                        className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white font-bold text-[10px] uppercase tracking-widest transition-all border border-white/5"
                       >
-                        {applications.some(a => a.jobId?._id === job._id) ? 'Active Target' : 'Initiate Auto-Apply'}
+                        Mark Complete
                       </button>
-                    </div>
+                    )}
+                    
+                    <a 
+                      href={job.url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="px-6 py-2.5 rounded-xl bg-white/5 hover:bg-indigo-600 hover:text-white text-slate-300 font-bold text-xs uppercase tracking-widest transition-all flex items-center gap-2 border border-white/5 hover:border-indigo-500"
+                    >
+                      View & Apply <ExternalLink className="h-3.5 w-3.5" />
+                    </a>
                   </div>
                 </motion.div>
               ))}
             </div>
+
+            {/* Pagination Controls */}
+            {pagination.totalPages > 1 && (
+              <div className="flex items-center justify-center gap-6 mt-12 py-8 border-t border-white/5">
+                <button
+                  onClick={() => handlePageChange(page - 1)}
+                  disabled={page === 1 || loading}
+                  className="px-6 py-3 rounded-xl bg-white/5 border border-white/5 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:border-indigo-500 hover:text-white disabled:opacity-20 disabled:hover:border-white/5 transition-all"
+                >
+                  Previous Page
+                </button>
+                <div className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                  <span className="text-white">{pagination.currentPage}</span> / <span className="text-slate-600">{pagination.totalPages}</span>
+                </div>
+                <button
+                  onClick={() => handlePageChange(page + 1)}
+                  disabled={page === pagination.totalPages || loading}
+                  className="px-6 py-3 rounded-xl bg-white/5 border border-white/5 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:border-indigo-500 hover:text-white disabled:opacity-20 disabled:hover:border-white/5 transition-all"
+                >
+                  Next Page
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>

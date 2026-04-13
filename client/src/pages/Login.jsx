@@ -3,7 +3,6 @@ import { motion } from 'framer-motion';
 import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock, ArrowRight, Sparkles } from 'lucide-react';
 import useAuthStore from '../store/authStore';
-import FloatingShapes from '../three-ui/FloatingShapes';
 
 const glassClass = "bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl";
 
@@ -18,13 +17,11 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const success = await login(email, password);
-    if (success) navigate('/dashboard');
+    if (success) navigate('/fresher-jobs');
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#030712] px-4 overflow-hidden relative">
-      <FloatingShapes />
-      
       <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 via-transparent to-purple-500/10" />
       
       <motion.div 
@@ -43,7 +40,7 @@ const Login = () => {
             <Sparkles className="h-8 w-8 text-white" />
           </motion.div>
           <h2 className="text-4xl font-black text-white mb-2 tracking-tight">Welcome Back</h2>
-          <p className="text-slate-400 font-medium">Sign in to your automation dashboard</p>
+          <p className="text-slate-400 font-medium">Access high-impact tech opportunities</p>
         </div>
         
         {error && (

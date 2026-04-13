@@ -1,14 +1,21 @@
+console.log('--- ENTERING INDEX.JS ---');
 try {
   const express = require('express');
+  console.log('✅ EX1');
   const path = require('path');
+  console.log('✅ EX2');
   const mongoose = require('mongoose');
+  console.log('✅ EX3');
   const cors = require('cors');
+  console.log('✅ EX4');
   const helmet = require('helmet');
+  console.log('✅ EX5');
   const morgan = require('morgan');
+  console.log('✅ EX6');
   require('dotenv').config();
+  console.log('✅ EX7');
 
   const app = express();
-  // Render (and most PaaS) inject PORT; bind 0.0.0.0 so health checks see an open port.
   const PORT = Number(process.env.PORT) || 5000;
   const HOST = process.env.HOST || '0.0.0.0';
 
@@ -16,18 +23,16 @@ try {
   app.use(express.json());
   app.use(cors());
   app.use(helmet({
-    crossOriginResourcePolicy: false, // Allow images to be loaded
+    crossOriginResourcePolicy: false,
   }));
   app.use(morgan('dev'));
   
-  // Static folder for screenshots
   app.use('/screenshots', express.static(path.join(__dirname, 'public/screenshots')));
 
   // Routes
   app.use('/api/auth', require('./routes/authRoutes'));
   app.use('/api/users', require('./routes/userRoutes'));
   app.use('/api/jobs', require('./routes/jobRoutes'));
-  app.use('/api/applications', require('./routes/applicationRoutes'));
   app.use('/api/cron', require('./routes/cronRoutes'));
 
   app.get('/', (req, res) => {
@@ -61,7 +66,6 @@ try {
     });
   });
 
-  // Database Connection
   mongoose.connect(process.env.MONGODB_URI)
     .then(() => console.log('✅ MongoDB Connected'))
     .catch(err => console.error('❌ MongoDB Connection Error:', err));
