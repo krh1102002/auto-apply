@@ -7,7 +7,7 @@ const safeRun = () => {
   });
 };
 
-// Run immediately on startup, then every hour at minute 0
-safeRun();
+// Run immediately on startup (with a small delay to ensure DB is ready), then every hour at minute 0
+setTimeout(safeRun, 5000); 
 cron.schedule('0 * * * *', safeRun);
-console.log('[Cron] Scheduler active. Runs every hour at minute 0.');
+console.log('⏰ [Cron] Scheduler active. Hourly cycles will run at minute 0.');

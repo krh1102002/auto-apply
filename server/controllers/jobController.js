@@ -19,7 +19,7 @@ const ROLES_TO_TRACK = Object.keys(ROLE_MAP);
 
 const getJobs = async (req, res) => {
   try {
-    const { title, location, company, daysAgo, experienceLevel, tech, applicationStatus, region, role, page = 1, limit = 30 } = req.query;
+    const { title, location, company, daysAgo, experienceLevel, tech, applicationStatus, region, role, page = 1, limit = 7 } = req.query;
     const userId = req.user.id;
     
     // 1. Build Base Match Conditions

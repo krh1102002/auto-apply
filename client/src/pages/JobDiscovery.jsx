@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import useJobStore from '../store/jobStore';
 import { Search, Globe, MapPin, Building2, ExternalLink, Play, Loader2, Sparkles, CheckCircle2 } from 'lucide-react';
+import SyncReminderModal from '../components/SyncReminderModal';
 
 const glassClass = "bg-[#0f172a]/50 backdrop-blur-xl border border-white/5 shadow-2xl";
 const glassCardClass = `${glassClass} rounded-2xl transition-all duration-300 hover:bg-[#0f172a]/80 hover:border-white/10`;
@@ -24,6 +25,7 @@ const JobDiscovery = ({ mode = 'fresher' }) => {
   const [applicationStatus, setApplicationStatus] = useState('Unapplied');
   const [role, setRole] = useState('');
   const [page, setPage] = useState(1);
+  const [showSyncModal, setShowSyncModal] = useState(false);
 
   // Tech options list
   const techStacks = [
@@ -40,6 +42,24 @@ const JobDiscovery = ({ mode = 'fresher' }) => {
       setExperienceLevel('');
     }
   }, [mode]);
+  
+  // Daily Sync Reminder Logic
+  useEffect(() => {
+    const lastReminder = localStorage.getItem('lastSyncReminder');
+    const now = Date.now();
+    const twentyFourHours = 24 * 60 * 60 * 1000;
+
+    if (!lastReminder || (now - parseInt(lastReminder)) > twentyFourHours) {
+      // Delay modal slightly for better entrance effect
+      const timer = setTimeout(() => setShowSyncModal(true), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
+  const handleCloseModal = () => {
+    setShowSyncModal(false);
+    localStorage.setItem('lastSyncReminder', Date.now().toString());
+  };
 
   useEffect(() => {
     fetchJobs({ 
@@ -48,7 +68,8 @@ const JobDiscovery = ({ mode = 'fresher' }) => {
       tech: tech.filter(t => t.trim() !== ''),
       applicationStatus,
       role,
-      page 
+      page,
+      limit: 7
     });
   }, [searchQuery, experienceLevel, tech, applicationStatus, role, page, mode]);
 
@@ -68,6 +89,11 @@ const JobDiscovery = ({ mode = 'fresher' }) => {
 
   return (
     <div className="min-h-screen bg-[#030712] text-slate-100 p-8 font-sans">
+      <SyncReminderModal 
+        isOpen={showSyncModal} 
+        onClose={handleCloseModal} 
+        onSync={refreshJobs} 
+      />
       <div className="max-w-7xl mx-auto">
         <header className="mb-12 flex justify-between items-end">
           <motion.div

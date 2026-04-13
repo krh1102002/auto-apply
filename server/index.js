@@ -17,6 +17,7 @@ try {
   
   // Background Workers
   require('./queues/applicationQueue');
+  require('./hourlyJobCron');
 
   const app = express();
   const PORT = Number(process.env.PORT) || 5000;
