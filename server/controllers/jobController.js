@@ -25,7 +25,12 @@ const getJobs = async (req, res) => {
     // 1. Build Base Match Conditions
     const andConditions = [{ status: 'Open' }];
     
-    if (experienceLevel) andConditions.push({ experienceLevel });
+    if (experienceLevel) {
+      const expArray = (Array.isArray(experienceLevel) ? experienceLevel : [experienceLevel]).filter(e => e && e.trim() !== '');
+      if (expArray.length > 0) {
+        andConditions.push({ experienceLevel: { $in: expArray } });
+      }
+    }
     if (title && title.trim()) andConditions.push({ title: { $regex: title.trim(), $options: 'i' } });
     if (company && company.trim()) andConditions.push({ company: { $regex: company.trim(), $options: 'i' } });
     

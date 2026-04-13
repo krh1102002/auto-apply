@@ -39,7 +39,7 @@ const JobDiscovery = ({ mode = 'fresher' }) => {
     if (mode === 'fresher') {
       setExperienceLevel('Entry');
     } else {
-      setExperienceLevel('');
+      setExperienceLevel(['Mid', 'Senior']);
     }
   }, [mode]);
   
@@ -171,7 +171,8 @@ const JobDiscovery = ({ mode = 'fresher' }) => {
                     className="w-full bg-white/5 border border-white/5 rounded-xl p-3 text-xs focus:outline-none focus:border-indigo-500/50 transition-all text-slate-200"
                     value={experienceLevel}
                     onChange={(e) => {
-                      setExperienceLevel(e.target.value);
+                      const val = e.target.value;
+                      setExperienceLevel(val.includes(',') ? val.split(',') : val);
                       setPage(1);
                     }}
                   >
@@ -179,9 +180,9 @@ const JobDiscovery = ({ mode = 'fresher' }) => {
                       <option value="Entry" className="bg-[#0f172a]">Entry / Graduate Only</option>
                     ) : (
                       <>
-                        <option value="" className="bg-[#0f172a]">All Experienced Tiers</option>
-                        <option value="Mid" className="bg-[#0f172a]">Mid-Level</option>
-                        <option value="Senior" className="bg-[#0f172a]">Senior / Lead</option>
+                        <option value={['Mid', 'Senior']} className="bg-[#0f172a]">Mid & Senior Combined</option>
+                        <option value="Mid" className="bg-[#0f172a]">Mid-Level Only</option>
+                        <option value="Senior" className="bg-[#0f172a]">Senior / Lead Only</option>
                       </>
                     )}
                   </select>
