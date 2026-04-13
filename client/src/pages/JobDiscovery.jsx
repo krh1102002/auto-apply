@@ -22,7 +22,6 @@ const JobDiscovery = ({ mode = 'fresher' }) => {
   const [experienceLevel, setExperienceLevel] = useState('');
   const [tech, setTech] = useState([]);
   const [applicationStatus, setApplicationStatus] = useState('Unapplied');
-  const [region, setRegion] = useState('');
   const [role, setRole] = useState('');
   const [page, setPage] = useState(1);
 
@@ -48,11 +47,10 @@ const JobDiscovery = ({ mode = 'fresher' }) => {
       experienceLevel: experienceLevel,
       tech: tech.filter(t => t.trim() !== ''),
       applicationStatus,
-      region,
       role,
       page 
     });
-  }, [searchQuery, experienceLevel, tech, applicationStatus, region, role, page, mode]);
+  }, [searchQuery, experienceLevel, tech, applicationStatus, role, page, mode]);
 
   const toggleTech = (t) => {
     setTech(prev => 
@@ -107,26 +105,6 @@ const JobDiscovery = ({ mode = 'fresher' }) => {
                 {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
                 {loading ? 'Discovering...' : 'Sync Latest Roles'}
               </button>
-            </div>
-
-            <div className={`${glassCardClass} p-6`}>
-              <h3 className="text-xs font-black uppercase tracking-widest text-indigo-400 mb-4 flex items-center gap-2">
-                 <div className="h-1.5 w-1.5 rounded-full bg-indigo-400" /> Geographic Focus
-              </h3>
-              <div className="grid grid-cols-2 gap-2 p-1 bg-white/5 rounded-xl border border-white/5">
-                <button 
-                  onClick={() => { setRegion(''); setPage(1); }}
-                  className={`py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${region === '' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
-                >
-                  Global
-                </button>
-                <button 
-                  onClick={() => { setRegion('India'); setPage(1); }}
-                  className={`py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${region === 'India' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
-                >
-                  India 🇮🇳
-                </button>
-              </div>
             </div>
 
             <div className={`${glassCardClass} p-6`}>
@@ -266,7 +244,7 @@ const JobDiscovery = ({ mode = 'fresher' }) => {
                 <div className="text-center py-20">
                    <Loader2 className="h-8 w-8 animate-spin text-indigo-500 mx-auto mb-4" />
                    <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">
-                     {region === 'India' ? 'Pulsing India Tech Hub...' : 'Filtering global tech pulse...'}
+                     Filtering tech pulse...
                    </p>
                 </div>
               )}
