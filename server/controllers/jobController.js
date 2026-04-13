@@ -123,16 +123,18 @@ const getJobs = async (req, res) => {
 
     const totalJobs = totalResult[0]?.total || 0;
 
-    // 4. Role Statistics Logic (Independent of active role filter)
-    // We filter out any condition that targets the 'title' field using one of our ROLE_MAP regexes
-    const statsBaseConditions = andConditions.filter(c => {
-      if (!c.title || !c.title.$regex) return true;
-      const regexStr = c.title.$regex.toString();
-      return !ROLES_TO_TRACK.some(r => ROLE_MAP[r].toString() === regexStr);
-    });
-    const statsBaseQuery = statsBaseConditions.length > 1 
-      ? { $and: statsBaseConditions } 
-      : (statsBaseConditions[0] || {});
+    // 4. Role Statistics Logic (Strictly Honor Seniority)
+    // Ensure that the sidebar counts (e.g., Fullstack: 261) only show roles for the current grid
+    const statsBaseQuery = { ...match };
+    
+    // Remove title-specific filters from the stats base so we can count each track individually
+    if (statsBaseQuery.$and) {
+      statsBaseQuery.$and = statsBaseQuery.$and.filter(c => {
+        if (!c.title || !c.title.$regex) return true;
+        const regexStr = c.title.$regex.toString();
+        return !ROLES_TO_TRACK.some(r => ROLE_MAP[r].toString() === regexStr);
+      });
+    }
 
     const roleStats = {};
     await Promise.all(ROLES_TO_TRACK.map(async (r) => {

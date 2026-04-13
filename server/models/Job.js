@@ -9,7 +9,7 @@ const jobSchema = new mongoose.Schema({
   description: { type: String },
   url: { type: String, required: true, unique: true },
   source: { type: String }, // e.g., 'Greenhouse', 'LinkedIn'
-  experienceLevel: { type: String, enum: ['Entry', 'Mid', 'Senior', 'Lead'], default: 'Entry' },
+  experienceLevel: { type: String, enum: ['Entry', 'Mid', 'Senior', 'Lead', 'Unknown', 'Mid/Senior'], default: 'Unknown' },
   status: { type: String, enum: ['Open', 'Closed'], default: 'Open' },
   postedAt: { type: Date },
   detectedAt: { type: Date, default: Date.now }
