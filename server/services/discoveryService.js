@@ -119,36 +119,38 @@ const isWithinFreshnessWindow = (date) => {
   return diffDays <= MAX_AGE_DAYS;
 };
 
-const categorizeExperienceLevel = (title = '', description = '') => {
-  const text = `${title} ${description}`.toLowerCase();
+const categorizeExperienceLevel = (title, description) => {
+  const t = (title || '').toLowerCase();
+  const d = (description || '').toLowerCase();
+
+  const seniorKeywords = [
+    'senior', 'sr\\.', 'lead', 'staff', 'principal', 'architect', 'expert', 
+    'manager', 'director', 'vp', 'head', 'vp of', 'chief', 'executive', 'cto'
+  ];
+  const juniorKeywords = [
+    'junior', 'jr\\.', 'entry', 'freshers', 'entry-level', 'graduate', 'intern', 
+    'trainee', 'associate', '0-1 year', '0-2 years', 'fresher', 'new grad'
+  ];
+
+  const seniorRegex = new RegExp(`\\b(${seniorKeywords.join('|')})\\b`, 'i');
+  const juniorRegex = new RegExp(`\\b(${juniorKeywords.join('|')})\\b`, 'i');
+
+  if (seniorRegex.test(t)) return 'Senior';
+  if (juniorRegex.test(t) || juniorRegex.test(d)) return 'Entry';
   
-  const isSenior = [
-    'senior', 'sr.', 'lead', 'staff', 'principal', 'manager', 'director', 'vp', 'head', 
-    'architect', 'expert', 'lead', 'director', 'l4', 'l5', 'l6', 'level 4', 'level 5',
-    '8+ years', '10+ years', '12+ years'
-  ].some(k => text.includes(k));
-
-  const isMid = [
-    'mid', 'intermediate', 'ii', 'iii', 'level 2', 'level 3', 'l2', 'l3',
-    '3+ years', '4+ years', '5+ years', 'specialist'
-  ].some(k => text.includes(k));
-
-  const isFresher = [
-    'fresher', 'entry', 'junior', 'intern', 'graduate', 'trainee', 'associate', 
-    '0 years', '0-1 years', '0-2 years', 'l1', 'level 1', 'level i', 'internship', 'apprentice'
-  ].some(k => text.includes(k));
-
-  // Prioritize Senior -> Mid -> Entry
-  if (isSenior) return 'Senior';
-  if (isMid) return 'Mid';
-  if (isFresher) return 'Entry';
-  
-  // If the title contains specific engineering "levels" or manager keywords, it's NOT Entry
-  if (/ director| manager| principal| lead | staff | architect| ii | iii | iv | v /i.test(title)) {
-    return 'Mid/Senior';
+  // OPTIMISM LAYER: If title is a tech role and lacks senior keywords, consider it Entry candidate
+  const techKeywords = /engineer|developer|software|fullstack|frontend|backend|devops|data scientist|analyst|qa|tester|programmer/i;
+  if (techKeywords.test(t) && !seniorRegex.test(d)) {
+    // If it mentions 4+ years of exp in description, it's senior
+    const yearsExp = d.match(/(\d+)\+?\s*years?/i);
+    if (yearsExp && parseInt(yearsExp[1]) >= 4) return 'Senior';
+    if (yearsExp && parseInt(yearsExp[1]) >= 2) return 'Mid';
+    
+    return 'Entry'; // Default to Entry for generic tech roles 
   }
 
-  return 'Unknown'; // Safety first: don't default to Entry anymore
+  if (seniorRegex.test(d)) return 'Senior';
+  return 'Unknown';
 };
 
 const normalizeGreenhouse = (company, item) => {

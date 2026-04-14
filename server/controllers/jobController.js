@@ -25,8 +25,8 @@ const getJobs = async (req, res) => {
     // 1. Build Base Match Conditions (Safety-First: Default to Entry)
     const andConditions = [{ status: 'Open' }];
     
-    // Safety Fallback: Default to 'Entry' if no seniority filter is provided by the client
-    const activeExperience = experienceLevel || 'Entry';
+    // Safety Fallback: Default to 'Entry' & 'Unknown' if no seniority filter is provided by the client (Signal Boosting)
+    const activeExperience = experienceLevel || ['Entry', 'Unknown'];
     const expArray = (Array.isArray(activeExperience) ? activeExperience : [activeExperience]).filter(e => e && e.trim() !== '');
     
     if (expArray.length > 0) {

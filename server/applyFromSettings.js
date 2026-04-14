@@ -25,12 +25,15 @@ const isMatchBySettings = (job, settings) => {
   }
 
   if (experienceLevels.length > 0) {
-    // Strict block for ambiguous seniority on Entry-level accounts
-    if (experienceLevels.includes('Entry') && (job.experienceLevel === 'Unknown' || job.experienceLevel === 'Mid/Senior')) {
-      return { match: false, reason: `Exp Mismatch (Ambiguous: ${job.experienceLevel})` };
+    // Optimistic Synchronization: Allow 'Unknown' roles to bypass the strict block if they lack Senior keywords
+    // This allows the 300+ roles we unlocked in the UI to be eligible for automation.
+    const allowedForEntry = ['Entry', 'Unknown'];
+    if (experienceLevels.includes('Entry') && !allowedForEntry.includes(job.experienceLevel)) {
+      return { match: false, reason: `Exp Mismatch (${job.experienceLevel})` };
     }
     
-    if (!experienceLevels.includes(job.experienceLevel)) {
+    // Explicit match check for other levels
+    if (!experienceLevels.includes('Entry') && !experienceLevels.includes(job.experienceLevel)) {
       return { match: false, reason: `Exp Mismatch (${job.experienceLevel})` };
     }
   }
