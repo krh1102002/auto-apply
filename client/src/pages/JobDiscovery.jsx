@@ -61,6 +61,20 @@ const JobDiscovery = ({ mode = 'fresher' }) => {
     localStorage.setItem('lastSyncReminder', Date.now().toString());
   };
 
+  const handleDiscoverySync = async () => {
+    await refreshJobs();
+    // Re-apply filters immediately after sync to prevent seniority leakage
+    fetchJobs({ 
+      title: searchQuery.trim(), 
+      experienceLevel: experienceLevel,
+      tech: tech.filter(t => t.trim() !== ''),
+      applicationStatus,
+      role,
+      page: 1, // Reset to page 1 after sync
+      limit: 7
+    });
+  };
+
   useEffect(() => {
     fetchJobs({ 
       title: searchQuery.trim(), 
@@ -92,7 +106,7 @@ const JobDiscovery = ({ mode = 'fresher' }) => {
       <SyncReminderModal 
         isOpen={showSyncModal} 
         onClose={handleCloseModal} 
-        onSync={refreshJobs} 
+        onSync={handleDiscoverySync} 
       />
       <div className="max-w-7xl mx-auto">
         <header className="mb-12 flex justify-between items-end">
@@ -124,7 +138,7 @@ const JobDiscovery = ({ mode = 'fresher' }) => {
                  <div className="h-1.5 w-1.5 rounded-full bg-indigo-400" /> Action Center
               </h3>
               <button 
-                onClick={() => refreshJobs()}
+                onClick={handleDiscoverySync}
                 className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 rounded-xl flex items-center justify-center gap-2 transition-all font-bold text-xs shadow-lg shadow-indigo-600/20 active:scale-95 mb-4"
                 disabled={loading}
               >

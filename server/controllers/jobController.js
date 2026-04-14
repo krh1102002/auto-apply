@@ -124,24 +124,25 @@ const getJobs = async (req, res) => {
 
     const totalJobs = totalResult[0]?.total || 0;
 
-    // 4. Role Statistics Logic (Strictly Honor Seniority)
-    // Ensure that the sidebar counts (e.g., Fullstack: 261) only show roles for the current grid
-    const statsBaseQuery = { ...match };
-    
-    // Remove title-specific filters from the stats base so we can count each track individually
-    if (statsBaseQuery.$and) {
-      statsBaseQuery.$and = statsBaseQuery.$and.filter(c => {
-        if (!c.title || !c.title.$regex) return true;
-        const regexStr = c.title.$regex.toString();
-        return !ROLES_TO_TRACK.some(r => ROLE_MAP[r].toString() === regexStr);
-      });
-    }
+    // 4. Hardened Role Statistics Logic (Strictly Honor Workflow & Seniority)
+    const statsPipeline = [
+      ...pipeline, // Inherits status, seniority, location, and applicationStatus filters
+      {
+        $facet: ROLES_TO_TRACK.reduce((acc, roleName) => {
+          acc[roleName] = [
+            { $match: { title: { $regex: ROLE_MAP[roleName] } } },
+            { $count: 'count' }
+          ];
+          return acc;
+        }, {})
+      }
+    ];
 
+    const [statsResult] = await Job.aggregate(statsPipeline);
     const roleStats = {};
-    await Promise.all(ROLES_TO_TRACK.map(async (r) => {
-      const count = await Job.countDocuments({ ...statsBaseQuery, title: { $regex: ROLE_MAP[r] } });
-      roleStats[r] = count;
-    }));
+    ROLES_TO_TRACK.forEach(r => {
+      roleStats[r] = statsResult[r]?.[0]?.count || 0;
+    });
 
     res.json({
       jobs,

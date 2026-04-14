@@ -83,7 +83,7 @@ const useJobStore = create((set, get) => ({
           headers: { "x-auth-token": token },
         },
       );
-      get().fetchJobs();
+      // Removed automatic naked fetch to preserve UI filter context
     } catch (err) {
       set({ error: "Refresh failed", loading: false });
     }
