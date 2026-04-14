@@ -238,9 +238,9 @@ const JobDiscovery = ({ mode = 'fresher' }) => {
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Workflow</label>
                   <div className="grid grid-cols-1 gap-2">
                     {[
-                      { id: 'Unapplied', label: 'New / Unapplied' },
-                      { id: 'Applied', label: 'Handled / Applied' },
-                      { id: 'All', label: 'All Global Roles' }
+                      { id: 'Unapplied', label: 'New / Not Submitted' },
+                      { id: 'Applied', label: 'Successfully Submitted' },
+                      { id: 'All', label: 'All Global Pulse' }
                     ].map(status => {
                       const isActive = applicationStatus === status.id;
                       return (
