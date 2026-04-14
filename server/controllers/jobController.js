@@ -22,14 +22,15 @@ const getJobs = async (req, res) => {
     const { title, location, company, daysAgo, experienceLevel, tech, applicationStatus, region, role, page = 1, limit = 7 } = req.query;
     const userId = req.user.id;
     
-    // 1. Build Base Match Conditions
+    // 1. Build Base Match Conditions (Safety-First: Default to Entry)
     const andConditions = [{ status: 'Open' }];
     
-    if (experienceLevel) {
-      const expArray = (Array.isArray(experienceLevel) ? experienceLevel : [experienceLevel]).filter(e => e && e.trim() !== '');
-      if (expArray.length > 0) {
-        andConditions.push({ experienceLevel: { $in: expArray } });
-      }
+    // Safety Fallback: Default to 'Entry' if no seniority filter is provided by the client
+    const activeExperience = experienceLevel || 'Entry';
+    const expArray = (Array.isArray(activeExperience) ? activeExperience : [activeExperience]).filter(e => e && e.trim() !== '');
+    
+    if (expArray.length > 0) {
+      andConditions.push({ experienceLevel: { $in: expArray } });
     }
     if (title && title.trim()) andConditions.push({ title: { $regex: title.trim(), $options: 'i' } });
     if (company && company.trim()) andConditions.push({ company: { $regex: company.trim(), $options: 'i' } });

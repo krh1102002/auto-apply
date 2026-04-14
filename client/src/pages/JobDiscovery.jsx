@@ -20,7 +20,7 @@ const JobDiscovery = ({ mode = 'fresher' }) => {
   } = useJobStore();
   
   const [searchQuery, setSearchQuery] = useState('');
-  const [experienceLevel, setExperienceLevel] = useState('');
+  const [experienceLevel, setExperienceLevel] = useState(mode === 'fresher' ? 'Entry' : ['Mid', 'Senior']);
   const [tech, setTech] = useState([]);
   const [applicationStatus, setApplicationStatus] = useState('Unapplied');
   const [role, setRole] = useState('');
