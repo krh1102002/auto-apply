@@ -221,6 +221,71 @@ const discoverFromLever = async () => {
   return discovered;
 };
 
+const discoverFromHackerNews = async () => {
+  try {
+    const thirtyDaysAgo = Math.floor(Date.now() / 1000) - (MAX_AGE_DAYS * 24 * 60 * 60);
+    // 1. Find the latest "Who is Hiring" story
+    const searchUrl = `https://hn.algolia.com/api/v1/search?tags=story,author:whoishiring&query="Who is hiring"&numericFilters=created_at_i>${thirtyDaysAgo}`;
+    const { data: searchData } = await axios.get(searchUrl, { timeout: HTTP_TIMEOUT_MS });
+    
+    if (!searchData.hits || searchData.hits.length === 0) return [];
+    
+    const latestStory = searchData.hits[0];
+    console.log(`🔍 [HackerNews] Scanning thread: "${latestStory.title}"`);
+    
+    // 2. Fetch all comments (each comment is a job post)
+    const itemUrl = `https://hn.algolia.com/api/v1/items/${latestStory.objectID}`;
+    const { data: itemData } = await axios.get(itemUrl, { timeout: HTTP_TIMEOUT_MS });
+    
+    const jobs = [];
+    let count = 0;
+
+    const processComments = (comments) => {
+      for (const comment of comments) {
+        if (!comment.text) continue;
+        
+        // HN jobs usually have the company name in the first bold part or first line
+        const lines = comment.text.replace(/<[^>]*>/g, ' ').split('\n');
+        const firstLine = lines[0] || '';
+        
+        // Simple extraction: Company | Title | Location
+        // Often formatted as "Company Name | Job Title | Location"
+        const parts = firstLine.split('|').map(p => p.trim());
+        const company = parts[0] || 'Unknown HN Startup';
+        const title = parts[1] || 'Software Engineer';
+        const location = parts[2] || 'Remote / Multiple';
+
+        if (isRelevant(title, comment.text) && isIndiaOrRemote(location)) {
+          const exp = categorizeExperienceLevel(title, comment.text);
+          jobs.push({
+            title,
+            company,
+            location,
+            description: comment.text,
+            url: `https://news.ycombinator.com/item?id=${comment.id}`,
+            source: 'HackerNews',
+            experienceLevel: exp,
+            status: 'Open',
+            postedAt: new Date(comment.created_at),
+            detectedAt: new Date()
+          });
+          count++;
+        }
+        
+        // Note: HN comments are threaded, but Job posts are usually top-level. 
+        // We only process children if needed, but usually top-level is best.
+      }
+    };
+
+    processComments(itemData.children || []);
+    console.log(`   - Found ${count} relevant HN roles.`);
+    return jobs;
+  } catch (error) {
+    console.error('Hacker News discovery failed:', error.message);
+    return [];
+  }
+};
+
 const discoverFromArbeitnow = async () => {
   try {
     const url = 'https://www.arbeitnow.com/api/job-board-api';
@@ -253,49 +318,145 @@ const discoverFromArbeitnow = async () => {
   }
 };
 
-const discoverFromLinkedIn = async () => {
+const discoverFromJooble = async () => {
   try {
-    // Search for Software Engineer roles (last 30 days via f_TPR=r2592000)
-    const url = 'https://www.linkedin.com/jobs/search?keywords=Software%20Engineer&location=Worldwide&f_TPR=r2592000';
-    const { data } = await axios.get(url, { 
-      timeout: HTTP_TIMEOUT_MS,
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-      }
-    });
-    
-    const $ = cheerio.load(data);
-    const jobs = [];
-    
-    $('.base-search-card').each((i, el) => {
-      const title = $(el).find('.base-search-card__title').text().trim();
-      const company = $(el).find('.base-search-card__subtitle').text().trim();
-      const location = $(el).find('.job-search-card__location').text().trim();
-      const link = $(el).find('.base-card__full-link').attr('href');
-      const timeStr = $(el).find('.job-search-card__listdate').attr('datetime');
-      
-      if (title && company && link && isRelevant(title, '') && 
-          isWithinFreshnessWindow(timeStr) && isIndiaOrRemote(location)) {
-        const exp = categorizeExperienceLevel(title, '');
-        jobs.push({
-          title,
-          company,
-          location,
-          url: link.split('?')[0],
-          source: 'LinkedIn',
-          experienceLevel: exp,
-          status: 'Open',
-          postedAt: timeStr ? new Date(timeStr) : new Date(),
-          detectedAt: new Date()
+    const apiKey = process.env.JOOBLE_API_KEY;
+    if (!apiKey) return [];
+
+    const url = `https://jooble.org/api/${apiKey}`;
+    const keywords = ['Software Engineer', 'Java Developer', 'SQL Developer', 'Fullstack'];
+    const discovered = [];
+
+    for (const kw of keywords) {
+      const { data } = await axios.post(url, {
+        keywords: kw,
+        location: 'India',
+        page: '1'
+      }, { timeout: HTTP_TIMEOUT_MS });
+
+      if (data.jobs) {
+        data.jobs.forEach(item => {
+          if (isRelevant(item.title, item.snippet)) {
+            discovered.push({
+              title: item.title,
+              company: item.company || 'Jooble Listing',
+              location: item.location || 'India',
+              description: item.snippet || '',
+              url: item.link,
+              source: 'Jooble',
+              experienceLevel: categorizeExperienceLevel(item.title, item.snippet),
+              status: 'Open',
+              detectedAt: new Date()
+            });
+          }
         });
       }
-    });
-    
-    return jobs;
+    }
+    console.log(`🔍 [Jooble] Found ${discovered.length} roles.`);
+    return discovered;
   } catch (error) {
-    console.error('LinkedIn public scrape failed');
+    console.error('Jooble discovery failed (Check API Key)');
     return [];
   }
+};
+
+const discoverFromAdzuna = async () => {
+  try {
+    const appId = process.env.ADZUNA_APP_ID;
+    const apiKey = process.env.ADZUNA_APP_KEY;
+    if (!appId || !apiKey) return [];
+
+    const url = `https://api.adzuna.com/v1/api/jobs/in/search/1?app_id=${appId}&app_key=${apiKey}&what=Software%20Engineer&content-type=application/json`;
+    const { data } = await axios.get(url, { timeout: HTTP_TIMEOUT_MS });
+    
+    const jobs = (data.results || [])
+      .filter(item => isRelevant(item.title, item.description))
+      .map(item => ({
+        title: item.title,
+        company: item.company?.display_name || 'Adzuna Listing',
+        location: item.location?.display_name || 'India',
+        description: item.description || '',
+        url: item.redirect_url,
+        source: 'Adzuna',
+        experienceLevel: categorizeExperienceLevel(item.title, item.description),
+        status: 'Open',
+        postedAt: new Date(item.created),
+        detectedAt: new Date()
+      }));
+    
+    console.log(`🔍 [Adzuna] Found ${jobs.length} roles.`);
+    return jobs;
+  } catch (error) {
+    console.error('Adzuna discovery failed (Check App ID/Key)');
+    return [];
+  }
+};
+
+const discoverFromLinkedIn = async () => {
+  const keywords = [
+    'Software Engineer',
+    'Java Developer',
+    'SQL Developer',
+    'Frontend Developer',
+    'Backend Developer',
+    'Fullstack Developer',
+    'Python Developer',
+    'DevOps Engineer'
+  ];
+  
+  const discovered = [];
+  console.log(`🔍 [LinkedIn] Starting multi-keyword scan (${keywords.length} tracks)...`);
+
+  for (const keyword of keywords) {
+    try {
+      // Search for specific roles (last 30 days via f_TPR=r2592000)
+      const encodedKeyword = encodeURIComponent(keyword);
+      const url = `https://www.linkedin.com/jobs/search?keywords=${encodedKeyword}&location=Worldwide&f_TPR=r2592000`;
+      
+      const { data } = await axios.get(url, { 
+        timeout: HTTP_TIMEOUT_MS,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+      });
+      
+      const $ = cheerio.load(data);
+      let count = 0;
+      
+      $('.base-search-card').each((i, el) => {
+        const title = $(el).find('.base-search-card__title').text().trim();
+        const company = $(el).find('.base-search-card__subtitle').text().trim();
+        const location = $(el).find('.job-search-card__location').text().trim();
+        const link = $(el).find('.base-card__full-link').attr('href');
+        const timeStr = $(el).find('.job-search-card__listdate').attr('datetime');
+        
+        if (title && company && link && isRelevant(title, '') && 
+            isWithinFreshnessWindow(timeStr) && isIndiaOrRemote(location)) {
+          const exp = categorizeExperienceLevel(title, '');
+          discovered.push({
+            title,
+            company,
+            location,
+            url: link.split('?')[0],
+            source: 'LinkedIn',
+            experienceLevel: exp,
+            status: 'Open',
+            postedAt: timeStr ? new Date(timeStr) : new Date(),
+            detectedAt: new Date()
+          });
+          count++;
+        }
+      });
+      console.log(`   - [${keyword}]: Found ${count} relevant roles.`);
+      
+      // Small pause between keywords to be polite
+      await new Promise(r => setTimeout(r, 2000));
+    } catch (error) {
+      console.error(`   - [${keyword}] Scrape failed:`, error.message);
+    }
+  }
+  
+  return discovered;
 };
 
 const upsertJobs = async (jobs) => {
@@ -323,18 +484,21 @@ const upsertJobs = async (jobs) => {
 };
 
 const discoverAllJobs = async () => {
-  console.log('🚀 Starting global tech job discovery (Strict Tech-Only + 30-day window)...');
-  const [gh, lv, an, li] = await Promise.all([
+  console.log('🚀 Starting global tech discovery mesh (Direct, Elite, & Aggregated)...');
+  const [gh, lv, hn, an, jb, az, li] = await Promise.all([
     discoverFromGreenhouse(),
     discoverFromLever(),
+    discoverFromHackerNews(),
     discoverFromArbeitnow(),
+    discoverFromJooble(),
+    discoverFromAdzuna(),
     discoverFromLinkedIn()
   ]);
   
-  const allJobs = [...gh, ...lv, ...an, ...li];
+  const allJobs = [...gh, ...lv, ...hn, ...an, ...jb, ...az, ...li];
   const savedCount = await upsertJobs(allJobs);
   
-  console.log(`✅ Discovery complete. Found ${allJobs.length} fresh tech roles. Updated/Saved ${savedCount} records.`);
+  console.log(`✅ Discovery complete. Pulled from 6 major streams. Found ${allJobs.length} tech roles. Updated/Saved ${savedCount} records.`);
   return { total: allJobs.length, saved: savedCount };
 };
 
